@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion de Stock - Magasin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0; padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+      font-size: 15px;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    button {
+      padding: 12px 18px;
+      margin: 4px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .btn-add { background: #28a745; color: white; }
+    .btn-buy { background: #17a2b8; color: white; }
+    .btn-sell { background: #ffc107; color: black; }
+    .btn-delete { background: #dc3545; color: white; }
+    .form {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+    .form input {
+      padding: 8px;
+      flex: 1;
+      font-size: 16px;
+    }
+    .search-bar {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .recette {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gestion de Stock - Magasin</h1>
+  <div class="container">
+    <h3>Ajouter un produit</h3>
+    <div class="form">
+      <input type="text" id="nom" placeholder="Nom du produit">
+      <input type="number" id="prix" placeholder="Prix (Dhs)">
+      <input type="number" id="quantite" placeholder="Quantité">
+      <input type="text" id="categorie" placeholder="Catégorie (optionnel)">
+      <button class="btn-add" onclick="ajouterProduit()">➕ Ajouter</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Rechercher par nom ou code..." onkeyup="rechercherProduit()">
+    </div>
+
+    <h3>Inventaire</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Produit</th>
+          <th>Catégorie</th>
+          <th>Prix (Dhs)</th>
+          <th>Quantité</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="listeProduits"></tbody>
+    </table>
+
+    <h3>📊 Ventes Journalières</h3>
+    <div class="recette" id="recetteJour">Recette totale : 0 DHS</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Produit</th>
+          <th>Quantité</th>
+          <th>Prix Unitaire</th>
+          <th>Total (Dhs)</th>
+        </tr>
+      </thead>
+      <tbody id="historiqueVentes"></tbody>
+    </table>
+  </div>
+
+<script>
+function prixAleatoire() {
+  return Math.floor(Math.random() * (37 - 15 + 1)) + 15;
+}
+
+function categorieAleatoire() {
+  let categories = ["Dentifrice", "Parfum", "Gel", "Gaz", "Téléphones", "Accessoires Mobile"];
+  return categories[Math.floor(Math.random() * categories.length)];
+}
+
+function genererCode() {
+  let code = "P" + String(produits.length + 1).padStart(3, '0');
+  return code;
+}
+
+let produits = JSON.parse(localStorage.getItem("produits")) || [
+  { code: "P001", nom: "Signal dentifrice petit", prix: prixAleatoire(), quantite: 20, categorie: "Dentifrice" },
+  { code: "P002", nom: "Colgate grand", prix: prixAleatoire(), quantite: 10, categorie: "Dentifrice" },
+  { code: "P003", nom: "Parfum AXE", prix: prixAleatoire(), quantite: 11, categorie: "Parfum" },
+  { code: "P004", nom: "Gel Faste petit", prix: prixAleatoire(), quantite: 14, categorie: "Gel" }
+];
+
+let ventes = JSON.parse(localStorage.getItem("ventes")) || [];
+
+function sauvegarder() {
+  localStorage.setItem("produits", JSON.stringify(produits));
+  localStorage.setItem("ventes", JSON.stringify(ventes));
+}
+
+function afficherProduits(liste = produits) {
+  let tbody = document.getElementById("listeProduits");
+  tbody.innerHTML = "";
+  liste.forEach((p, index) => {
+    tbody.innerHTML += `
+      <tr>
+        <td><b>${p.code}</b></td>
+        <td>${p.nom}</td>
+        <td>${p.categorie}</td>
+        <td>${p.prix} DHS</td>
+        <td>${p.quantite}</td>
+        <td>
+          <button class="btn-buy" onclick="acheterProduit(${index}, 1)">Achat (+1)</button>
+          <button class="btn-sell" onclick="vendreProduit(${index}, 1)">Vente détail (-1)</button>
+          <button class="btn-sell" onclick="vendreProduit(${index}, 5)">Vente gros (-5)</button>
+          <button class="btn-delete" onclick="supprimerProduit(${index})">🗑 Supprimer</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function afficherVentes() {
+  let tbody = document.getElementById("historiqueVentes");
+  tbody.innerHTML = "";
+  let totalJour = 0;
+  let today = new Date().toLocaleDateString();
+
+  ventes.forEach(v => {
+    if (v.date === today) {
+      tbody.innerHTML += `
+        <tr>
+          <td>${v.date}</td>
+          <td>${v.produit}</td>
+          <td>${v.quantite}</td>
+          <td>${v.prix} DHS</td>
+          <td><b>${v.total} DHS</b></td>
+        </tr>
+      `;
+      totalJour += v.total;
+    }
+  });
+
+  document.getElementById("recetteJour").innerText = "Recette totale : " + totalJour + " DHS";
+}
+
+function ajouterProduit() {
+  let nom = document.getElementById("nom").value;
+  let prix = parseFloat(document.getElementById("prix").value);
+  let quantite = parseInt(document.getElementById("quantite").value);
+  let categorie = document.getElementById("categorie").value || categorieAleatoire();
+
+  if (nom && quantite > 0) {
+    if (isNaN(prix) || prix <= 0) prix = prixAleatoire();
+    let code = genererCode();
+    produits.push({ code, nom, prix, quantite, categorie });
+    sauvegarder();
+    afficherProduits();
+    document.getElementById("nom").value = "";
+    document.getElementById("prix").value = "";
+    document.getElementById("quantite").value = "";
+    document.getElementById("categorie").value = "";
+  } else {
+    alert("Veuillez entrer un nom et une quantité valides !");
+  }
+}
+
+function acheterProduit(index, qte) {
+  produits[index].quantite += qte;
+  sauvegarder();
+  afficherProduits();
+}
+
+function vendreProduit(index, qte) {
+  if (produits[index].quantite >= qte) {
+    produits[index].quantite -= qte;
+
+    let vente = {
+      date: new Date().toLocaleDateString(),
+      produit: produits[index].nom,
+      quantite: qte,
+      prix: produits[index].prix,
+      total: produits[index].prix * qte
+    };
+    ventes.push(vente);
+
+    sauvegarder();
+    afficherProduits();
+    afficherVentes();
+  } else {
+    alert("Stock insuffisant !");
+  }
+}
+
+function supprimerProduit(index) {
+  if (confirm("Supprimer ce produit ?")) {
+    produits.splice(index, 1);
+    sauvegarder();
+    afficherProduits();
+  }
+}
+
+function rechercherProduit() {
+  let search = document.getElementById("search").value.toLowerCase();
+  let resultats = produits.filter(p => 
+    p.nom.toLowerCase().includes(search) || p.code.toLowerCase().includes(search)
+  );
+  afficherProduits(resultats);
+}
+
+afficherProduits();
+afficherVentes();
+</script>
+</body>
+</html>
+
